@@ -107,7 +107,8 @@ export default function App() {
   useEffect(() => {
     async function fetchAll() {
       setLoading(true);
-      const proxy = "https://corsproxy.io/?";
+       const proxy = "https://api.allorigins.win/raw?url=";
+
 
       const [remotive, himalayas, arbeitnow, remoteok, muse, nomads] = await Promise.all([
         safeFetch(`${proxy}https://remotive.com/api/remote-jobs?limit=100`, d =>
