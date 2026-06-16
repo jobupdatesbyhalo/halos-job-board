@@ -3,7 +3,7 @@ export default async function handler(req, res) {
   res.setHeader('Cache-Control', 's-maxage=3600');
   
   try {
-    const [remotive, arbeitnow, himalayas, nomads] = await Promise.allSettled([
+    const [remotive, arbeitnow, himalayas, nomads1, nomads2, nomads3, nomads4, nomads5] = await Promise.allSettled([
       fetch('https://remotive.com/api/remote-jobs?limit=150', {
         headers: { 'User-Agent': 'Mozilla/5.0' }
       }).then(r => r.json()),
@@ -19,68 +19,61 @@ export default async function handler(req, res) {
       fetch('https://workingnomads.com/api/exposed_jobs/?category=back-end-programming', {
         headers: { 'User-Agent': 'Mozilla/5.0' }
       }).then(r => r.json()),
+
+      fetch('https://workingnomads.com/api/exposed_jobs/?category=front-end-programming', {
+        headers: { 'User-Agent': 'Mozilla/5.0' }
+      }).then(r => r.json()),
+
+      fetch('https://workingnomads.com/api/exposed_jobs/?category=marketing', {
+        headers: { 'User-Agent': 'Mozilla/5.0' }
+      }).then(r => r.json()),
+
+      fetch('https://workingnomads.com/api/exposed_jobs/?category=design', {
+        headers: { 'User-Agent': 'Mozilla/5.0' }
+      }).then(r => r.json()),
+
+      fetch('https://workingnomads.com/api/exposed_jobs/?category=writing', {
+        headers: { 'User-Agent': 'Mozilla/5.0' }
+      }).then(r => r.json()),
     ]);
 
     let jobs = [];
 
     if (remotive.status === 'fulfilled') {
-      const mapped = (remotive.value.jobs || []).map(j => ({
-        title: j.title,
-        company: j.company_name,
-        logo: j.company_logo_url,
+      jobs = [...jobs, ...(remotive.value.jobs || []).map(j => ({
+        title: j.title, company: j.company_name, logo: j.company_logo_url,
         location: j.candidate_required_location || 'Worldwide',
-        type: j.job_type,
-        salary: j.salary,
-        url: j.url,
-        date: j.publication_date,
-        category: j.category,
-        source: 'Remotive'
-      }));
-      jobs = [...jobs, ...mapped];
+        type: j.job_type, salary: j.salary, url: j.url,
+        date: j.publication_date, category: j.category, source: 'Remotive'
+      }))];
     }
 
     if (arbeitnow.status === 'fulfilled') {
-      const mapped = (arbeitnow.value.data || []).filter(j => j.remote).map(j => ({
-        title: j.title,
-        company: j.company_name,
-        location: 'Remote',
-        type: 'Full-time',
-        url: j.url,
-        date: j.created_at,
-        category: j.tags?.[0] || '',
-        source: 'Arbeitnow'
-      }));
-      jobs = [...jobs, ...mapped];
+      jobs = [...jobs, ...(arbeitnow.value.data || []).filter(j => j.remote).map(j => ({
+        title: j.title, company: j.company_name, location: 'Remote',
+        type: 'Full-time', url: j.url, date: j.created_at,
+        category: j.tags?.[0] || '', source: 'Arbeitnow'
+      }))];
     }
 
     if (himalayas.status === 'fulfilled') {
-      const mapped = (himalayas.value.jobs || []).map(j => ({
-        title: j.title,
-        company: j.company?.name,
-        logo: j.company?.logo,
+      jobs = [...jobs, ...(himalayas.value.jobs || []).map(j => ({
+        title: j.title, company: j.company?.name, logo: j.company?.logo,
         location: j.locationRestrictions?.join(', ') || 'Worldwide',
-        type: j.jobType,
-        salary: j.salary,
-        url: j.applicationLink || j.url,
-        date: j.publishedAt,
-        category: j.categories?.[0] || '',
-        source: 'Himalayas'
-      }));
-      jobs = [...jobs, ...mapped];
+        type: j.jobType, salary: j.salary,
+        url: j.applicationLink || j.url, date: j.publishedAt,
+        category: j.categories?.[0] || '', source: 'Himalayas'
+      }))];
     }
 
-    if (nomads.status === 'fulfilled') {
-      const mapped = (Array.isArray(nomads.value) ? nomads.value : []).map(j => ({
-        title: j.title,
-        company: j.company_name,
-        logo: j.company_logo,
-        location: 'Worldwide',
-        type: 'Remote',
-        url: j.url,
-        date: j.pub_date,
-        source: 'Working Nomads'
-      }));
-      jobs = [...jobs, ...mapped];
+    for (const nomads of [nomads1, nomads2, nomads3, nomads4, nomads5]) {
+      if (nomads.status === 'fulfilled') {
+        jobs = [...jobs, ...(Array.isArray(nomads.value) ? nomads.value : []).map(j => ({
+          title: j.title, company: j.company_name, logo: j.company_logo,
+          location: 'Worldwide', type: 'Remote',
+          url: j.url, date: j.pub_date, source: 'Working Nomads'
+        }))];
+      }
     }
 
     const blocked = ["usa only", "us only", "united states only", "germany only", "uk only", "canada only", "australia only", "europe only"];
