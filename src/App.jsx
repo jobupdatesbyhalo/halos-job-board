@@ -67,11 +67,6 @@ function JobCard({ job }) {
             💰 {job.salary}
           </span>
         )}
-        {job.source && (
-          <span style={{ background: "#F5F5F5", color: "#888", borderRadius: 20, padding: "4px 12px", fontSize: 11, fontWeight: 500 }}>
-            via {job.source}
-          </span>
-        )}
       </div>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         <span style={{ fontSize: 12, color: "#aaa" }}>{timeAgo(job.date || job.publication_date)}</span>
@@ -86,7 +81,7 @@ function JobCard({ job }) {
 
 async function safeFetch(url, transform) {
   try {
-    const res = await fetch(url);
+    const res = await fetch("https://thingproxy.freeboard.io/fetch/" + url);
     if (!res.ok) return [];
     const data = await res.json();
     return transform(data).filter(j => j.title && j.url);
@@ -107,59 +102,48 @@ export default function App() {
   useEffect(() => {
     async function fetchAll() {
       setLoading(true);
-       const proxy = "https://api.allorigins.win/raw?url=";
 
-
-
-      const [remotive, himalayas, arbeitnow, remoteok, muse, nomads] = await Promise.all([
-        safeFetch(`${proxy}https://remotive.com/api/remote-jobs?limit=100`, d =>
+      const [remotive, himalayas, arbeitnow, remoteok, nomads] = await Promise.all([
+        safeFetch("https://remotive.com/api/remote-jobs?limit=100", d =>
           (d.jobs || []).map(j => ({
             title: j.title, company_name: j.company_name, company_logo: j.company_logo_url,
             location: j.candidate_required_location, job_type: j.job_type,
-            salary: j.salary, url: j.url, date: j.publication_date, source: "Remotive",
+            salary: j.salary, url: j.url, date: j.publication_date,
             category: j.category
           }))),
 
-        safeFetch(`${proxy}https://himalayas.app/jobs/api?limit=100`, d =>
+        safeFetch("https://himalayas.app/jobs/api?limit=100", d =>
           (d.jobs || []).map(j => ({
             title: j.title, company_name: j.company?.name, company_logo: j.company?.logo,
             location: j.locationRestrictions?.join(", ") || "Worldwide",
             job_type: j.jobType, salary: j.salary, url: j.applicationLink || j.url,
-            date: j.publishedAt, source: "Himalayas"
+            date: j.publishedAt
           }))),
 
-        safeFetch(`${proxy}https://www.arbeitnow.com/api/job-board-api`, d =>
+        safeFetch("https://www.arbeitnow.com/api/job-board-api", d =>
           (d.data || []).filter(j => j.remote).map(j => ({
             title: j.title, company_name: j.company_name,
             location: j.location || "Remote", job_type: j.job_types?.[0] || "Full-time",
-            url: j.url, date: j.created_at, source: "Arbeitnow"
+            url: j.url, date: j.created_at
           }))),
 
-        safeFetch(`${proxy}https://remoteok.com/api`, d =>
+        safeFetch("https://remoteok.com/api", d =>
           (Array.isArray(d) ? d.slice(1) : []).map(j => ({
             title: j.position, company_name: j.company, company_logo: j.logo,
             location: "Worldwide", job_type: "Remote",
-            salary: j.salary, url: j.url, date: j.date, source: "RemoteOK",
+            salary: j.salary, url: j.url, date: j.date,
             category: j.tags?.join(", ")
           }))),
 
-        safeFetch(`${proxy}https://www.themuse.com/api/public/jobs?page=1&api_key=`, d =>
-          (d.results || []).map(j => ({
-            title: j.name, company_name: j.company?.name,
-            location: j.locations?.[0]?.name || "Remote",
-            job_type: j.type, url: j.refs?.landing_page,
-            date: j.publication_date, source: "The Muse"
-          }))),
-
-        safeFetch(`${proxy}https://workingnomads.com/api/exposed_jobs/`, d =>
+        safeFetch("https://workingnomads.com/api/exposed_jobs/", d =>
           (Array.isArray(d) ? d : []).map(j => ({
             title: j.title, company_name: j.company_name, company_logo: j.company_logo,
             location: "Worldwide", job_type: "Remote",
-            url: j.url, date: j.pub_date, source: "Working Nomads"
+            url: j.url, date: j.pub_date
           }))),
       ]);
 
-      const all = [...remotive, ...himalayas, ...arbeitnow, ...remoteok, ...muse, ...nomads]
+      const all = [...remotive, ...himalayas, ...arbeitnow, ...remoteok, ...nomads]
         .filter(j => isWorldwide(j.location));
 
       const seen = new Set();
@@ -256,8 +240,7 @@ export default function App() {
         {loading ? (
           <div style={{ textAlign: "center", padding: "60px 20px", color: "#888" }}>
             <div style={{ fontSize: 32, marginBottom: 12 }}>⏳</div>
-            <div style={{ fontWeight: 600, marginBottom: 8 }}>Loading jobs from 6 sources...</div>
-            <div style={{ fontSize: 13 }}>Remotive • Himalayas • Arbeitnow • RemoteOK • The Muse • Working Nomads</div>
+            <div style={{ fontWeight: 600, marginBottom: 8 }}>Loading worldwide remote jobs...</div>
           </div>
         ) : filtered.length === 0 ? (
           <div style={{ textAlign: "center", padding: "60px 20px" }}>
@@ -292,9 +275,6 @@ export default function App() {
         textAlign: "center", padding: "20px", fontSize: 13
       }}>
         Built with 💗 by <strong style={{ color: PINK }}>Halo</strong> for Nigerian job seekers • Follow <strong style={{ color: PINK }}>@halosznn_</strong> on X
-        <div style={{ marginTop: 8, fontSize: 11 }}>
-          Jobs sourced from Remotive • Himalayas • Arbeitnow • RemoteOK • The Muse • Working Nomads
-        </div>
       </div>
     </div>
   );
