@@ -6,16 +6,6 @@ const LIGHT_PINK = "#FDE8F0";
 
 const CATEGORIES = ["All", "Tech", "Marketing", "Design", "Customer Service", "Finance", "HR", "Writing", "Sales", "Operations"];
 
-function isWorldwide(location) {
-  if (!location) return true;
-  const loc = location.toLowerCase();
-  const blocked = ["usa only", "us only", "united states only", "germany only", "uk only", "canada only", "australia only", "europe only", "france only", "spain only"];
-  const allowed = ["worldwide", "global", "anywhere", "remote", "international"];
-  if (blocked.some(b => loc.includes(b))) return false;
-  if (allowed.some(a => loc.includes(a))) return true;
-  return true;
-}
-
 function timeAgo(dateStr) {
   if (!dateStr) return "";
   const date = new Date(dateStr);
@@ -34,8 +24,8 @@ function JobCard({ job }) {
       boxShadow: "0 2px 8px rgba(244,91,142,0.06)"
     }}>
       <div style={{ display: "flex", alignItems: "flex-start", gap: 12, marginBottom: 12 }}>
-        {job.company_logo ? (
-          <img src={job.company_logo} alt={job.company_name}
+        {job.logo ? (
+          <img src={job.logo} alt={job.company}
             style={{ width: 44, height: 44, borderRadius: 10, objectFit: "contain", border: "1px solid #F0E0E8", flexShrink: 0 }}
             onError={e => e.target.style.display = "none"}
           />
@@ -45,21 +35,21 @@ function JobCard({ job }) {
             display: "flex", alignItems: "center", justifyContent: "center",
             fontSize: 18, fontWeight: 700, color: PINK, flexShrink: 0
           }}>
-            {job.company_name?.[0] || "?"}
+            {job.company?.[0] || "?"}
           </div>
         )}
         <div style={{ flex: 1 }}>
           <div style={{ fontWeight: 700, fontSize: 15, color: DARK, marginBottom: 2 }}>{job.title}</div>
-          <div style={{ fontSize: 13, color: "#888" }}>{job.company_name}</div>
+          <div style={{ fontSize: 13, color: "#888" }}>{job.company}</div>
         </div>
       </div>
       <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 12 }}>
         <span style={{ background: LIGHT_PINK, color: PINK, borderRadius: 20, padding: "4px 12px", fontSize: 12, fontWeight: 600 }}>
           📍 {job.location || "Worldwide"}
         </span>
-        {job.job_type && (
+        {job.type && (
           <span style={{ background: "#F0F4FF", color: "#4A6CF7", borderRadius: 20, padding: "4px 12px", fontSize: 12, fontWeight: 600 }}>
-            {job.job_type}
+            {job.type}
           </span>
         )}
         {job.salary && (
@@ -69,7 +59,7 @@ function JobCard({ job }) {
         )}
       </div>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <span style={{ fontSize: 12, color: "#aaa" }}>{timeAgo(job.date || job.publication_date)}</span>
+        <span style={{ fontSize: 12, color: "#aaa" }}>{timeAgo(job.date)}</span>
         <button style={{
           background: PINK, color: "#fff", border: "none", borderRadius: 20,
           padding: "7px 18px", fontSize: 12, fontWeight: 700, cursor: "pointer"
@@ -77,17 +67,6 @@ function JobCard({ job }) {
       </div>
     </div>
   );
-}
-
-async function safeFetch(url, transform) {
-  try {
-    const res = await fetch("https://thingproxy.freeboard.io/fetch/" + url);
-    if (!res.ok) return [];
-    const data = await res.json();
-    return transform(data).filter(j => j.title && j.url);
-  } catch {
-    return [];
-  }
 }
 
 export default function App() {
@@ -102,60 +81,15 @@ export default function App() {
   useEffect(() => {
     async function fetchAll() {
       setLoading(true);
-
-      const [remotive, himalayas, arbeitnow, remoteok, nomads] = await Promise.all([
-        safeFetch("https://remotive.com/api/remote-jobs?limit=100", d =>
-          (d.jobs || []).map(j => ({
-            title: j.title, company_name: j.company_name, company_logo: j.company_logo_url,
-            location: j.candidate_required_location, job_type: j.job_type,
-            salary: j.salary, url: j.url, date: j.publication_date,
-            category: j.category
-          }))),
-
-        safeFetch("https://himalayas.app/jobs/api?limit=100", d =>
-          (d.jobs || []).map(j => ({
-            title: j.title, company_name: j.company?.name, company_logo: j.company?.logo,
-            location: j.locationRestrictions?.join(", ") || "Worldwide",
-            job_type: j.jobType, salary: j.salary, url: j.applicationLink || j.url,
-            date: j.publishedAt
-          }))),
-
-        safeFetch("https://www.arbeitnow.com/api/job-board-api", d =>
-          (d.data || []).filter(j => j.remote).map(j => ({
-            title: j.title, company_name: j.company_name,
-            location: j.location || "Remote", job_type: j.job_types?.[0] || "Full-time",
-            url: j.url, date: j.created_at
-          }))),
-
-        safeFetch("https://remoteok.com/api", d =>
-          (Array.isArray(d) ? d.slice(1) : []).map(j => ({
-            title: j.position, company_name: j.company, company_logo: j.logo,
-            location: "Worldwide", job_type: "Remote",
-            salary: j.salary, url: j.url, date: j.date,
-            category: j.tags?.join(", ")
-          }))),
-
-        safeFetch("https://workingnomads.com/api/exposed_jobs/", d =>
-          (Array.isArray(d) ? d : []).map(j => ({
-            title: j.title, company_name: j.company_name, company_logo: j.company_logo,
-            location: "Worldwide", job_type: "Remote",
-            url: j.url, date: j.pub_date
-          }))),
-      ]);
-
-      const all = [...remotive, ...himalayas, ...arbeitnow, ...remoteok, ...nomads]
-        .filter(j => isWorldwide(j.location));
-
-      const seen = new Set();
-      const unique = all.filter(j => {
-        const key = `${j.title}-${j.company_name}`;
-        if (seen.has(key)) return false;
-        seen.add(key);
-        return true;
-      });
-
-      setJobs(unique);
-      setLoading(false);
+      try {
+        const res = await fetch('/api/jobs');
+        const data = await res.json();
+        setJobs(data.jobs || []);
+      } catch (e) {
+        console.error(e);
+      } finally {
+        setLoading(false);
+      }
     }
     fetchAll();
   }, []);
@@ -166,7 +100,7 @@ export default function App() {
       const q = search.toLowerCase();
       result = result.filter(j =>
         j.title?.toLowerCase().includes(q) ||
-        j.company_name?.toLowerCase().includes(q)
+        j.company?.toLowerCase().includes(q)
       );
     }
     if (category !== "All") {
