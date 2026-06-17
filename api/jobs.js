@@ -2,38 +2,28 @@ export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Cache-Control', 's-maxage=3600');
   
+  const RAPIDAPI_KEY = '63a741b745msh11fcaf14afa7b5ep10bf8fjsn02c7f5838d86';
+
   try {
-    const [remotive, arbeitnow, himalayas, nomads1, nomads2, nomads3, nomads4, nomads5] = await Promise.allSettled([
-      fetch('https://remotive.com/api/remote-jobs?limit=150', {
-        headers: { 'User-Agent': 'Mozilla/5.0' }
-      }).then(r => r.json()),
+    const [remotive, arbeitnow, himalayas, jsearchNg, jsearchRemote] = await Promise.allSettled([
+      fetch('https://remotive.com/api/remote-jobs?limit=150').then(r => r.json()),
       
-      fetch('https://www.arbeitnow.com/api/job-board-api', {
-        headers: { 'User-Agent': 'Mozilla/5.0', 'Accept': 'application/json' }
-      }).then(r => r.json()),
+      fetch('https://www.arbeitnow.com/api/job-board-api').then(r => r.json()),
       
-      fetch('https://himalayas.app/jobs/api?limit=100', {
-        headers: { 'User-Agent': 'Mozilla/5.0', 'Accept': 'application/json' }
+      fetch('https://himalayas.app/jobs/api?limit=100').then(r => r.json()),
+
+      fetch('https://jsearch.p.rapidapi.com/search?query=jobs%20in%20nigeria&page=1&num_pages=2', {
+        headers: {
+          'x-rapidapi-host': 'jsearch.p.rapidapi.com',
+          'x-rapidapi-key': RAPIDAPI_KEY
+        }
       }).then(r => r.json()),
 
-      fetch('https://workingnomads.com/api/exposed_jobs/?category=back-end-programming', {
-        headers: { 'User-Agent': 'Mozilla/5.0' }
-      }).then(r => r.json()),
-
-      fetch('https://workingnomads.com/api/exposed_jobs/?category=front-end-programming', {
-        headers: { 'User-Agent': 'Mozilla/5.0' }
-      }).then(r => r.json()),
-
-      fetch('https://workingnomads.com/api/exposed_jobs/?category=marketing', {
-        headers: { 'User-Agent': 'Mozilla/5.0' }
-      }).then(r => r.json()),
-
-      fetch('https://workingnomads.com/api/exposed_jobs/?category=design', {
-        headers: { 'User-Agent': 'Mozilla/5.0' }
-      }).then(r => r.json()),
-
-      fetch('https://workingnomads.com/api/exposed_jobs/?category=writing', {
-        headers: { 'User-Agent': 'Mozilla/5.0' }
+      fetch('https://jsearch.p.rapidapi.com/search?query=remote%20jobs&page=1&num_pages=2&remote_jobs_only=true', {
+        headers: {
+          'x-rapidapi-host': 'jsearch.p.rapidapi.com',
+          'x-rapidapi-key': RAPIDAPI_KEY
+        }
       }).then(r => r.json()),
     ]);
 
@@ -66,17 +56,27 @@ export default async function handler(req, res) {
       }))];
     }
 
-    for (const nomads of [nomads1, nomads2, nomads3, nomads4, nomads5]) {
-      if (nomads.status === 'fulfilled') {
-        jobs = [...jobs, ...(Array.isArray(nomads.value) ? nomads.value : []).map(j => ({
-          title: j.title, company: j.company_name, logo: j.company_logo,
-          location: 'Worldwide', type: 'Remote',
-          url: j.url, date: j.pub_date, source: 'Working Nomads'
-        }))];
-      }
+    if (jsearchNg.status === 'fulfilled') {
+      jobs = [...jobs, ...(jsearchNg.value.data || []).map(j => ({
+        title: j.job_title, company: j.employer_name, logo: j.employer_logo,
+        location: j.job_city ? `${j.job_city}, Nigeria` : 'Nigeria',
+        type: j.job_employment_type, salary: j.job_salary_currency ? `${j.job_min_salary || ''}-${j.job_max_salary || ''} ${j.job_salary_currency}` : null,
+        url: j.job_apply_link, date: j.job_posted_at_datetime_utc,
+        source: 'JSearch'
+      }))];
     }
 
-    const blocked = ["usa only", "us only", "united states only", "germany only", "uk only", "canada only", "australia only", "europe only"];
+    if (jsearchRemote.status === 'fulfilled') {
+      jobs = [...jobs, ...(jsearchRemote.value.data || []).map(j => ({
+        title: j.job_title, company: j.employer_name, logo: j.employer_logo,
+        location: 'Worldwide',
+        type: j.job_employment_type, salary: j.job_salary_currency ? `${j.job_min_salary || ''}-${j.job_max_salary || ''} ${j.job_salary_currency}` : null,
+        url: j.job_apply_link, date: j.job_posted_at_datetime_utc,
+        source: 'JSearch'
+      }))];
+    }
+
+    const blocked = ["usa only", "us only", "united states only", "germany only", "uk only", "canada only", "australia only"];
     jobs = jobs.filter(j => {
       const loc = (j.location || '').toLowerCase();
       return !blocked.some(b => loc.includes(b));
