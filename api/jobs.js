@@ -12,7 +12,7 @@ export default async function handler(req, res) {
       
       fetch('https://himalayas.app/jobs/api?limit=100').then(r => r.json()),
 
-      fetch('https://jsearch.p.rapidapi.com/search?query=jobs%20in%20nigeria&page=1&num_pages=2', {
+      fetch('https://jsearch.p.rapidapi.com/search?query=jobs%20in%20nigeria&page=1&num_pages=3', {
         headers: {
           'x-rapidapi-host': 'jsearch.p.rapidapi.com',
           'x-rapidapi-key': RAPIDAPI_KEY
@@ -60,7 +60,8 @@ export default async function handler(req, res) {
       jobs = [...jobs, ...(jsearchNg.value.data || []).map(j => ({
         title: j.job_title, company: j.employer_name, logo: j.employer_logo,
         location: j.job_city ? `${j.job_city}, Nigeria` : 'Nigeria',
-        type: j.job_employment_type, salary: j.job_salary_currency ? `${j.job_min_salary || ''}-${j.job_max_salary || ''} ${j.job_salary_currency}` : null,
+        type: j.job_employment_type,
+        salary: j.job_salary_currency ? `${j.job_min_salary || ''}-${j.job_max_salary || ''} ${j.job_salary_currency}` : null,
         url: j.job_apply_link, date: j.job_posted_at_datetime_utc,
         source: 'JSearch'
       }))];
@@ -70,16 +71,25 @@ export default async function handler(req, res) {
       jobs = [...jobs, ...(jsearchRemote.value.data || []).map(j => ({
         title: j.job_title, company: j.employer_name, logo: j.employer_logo,
         location: 'Worldwide',
-        type: j.job_employment_type, salary: j.job_salary_currency ? `${j.job_min_salary || ''}-${j.job_max_salary || ''} ${j.job_salary_currency}` : null,
+        type: j.job_employment_type,
+        salary: j.job_salary_currency ? `${j.job_min_salary || ''}-${j.job_max_salary || ''} ${j.job_salary_currency}` : null,
         url: j.job_apply_link, date: j.job_posted_at_datetime_utc,
         source: 'JSearch'
       }))];
     }
 
-    const blocked = ["usa only", "us only", "united states only", "germany only", "uk only", "canada only", "australia only"];
+    const blockedCountries = ["united states", "usa", "germany", "canada", "united kingdom", "australia", "france", "spain", "brazil"];
+
     jobs = jobs.filter(j => {
       const loc = (j.location || '').toLowerCase();
-      return !blocked.some(b => loc.includes(b));
+      const isNigeria = loc.includes('nigeria');
+      const isWorldwideOrRemote = loc.includes('worldwide') || loc.includes('remote') || loc.includes('global') || loc.includes('anywhere') || loc === '';
+      const hasBlockedCountry = blockedCountries.some(c => loc.includes(c));
+
+      if (isNigeria) return true;
+      if (isWorldwideOrRemote && !hasBlockedCountry) return true;
+      if (!hasBlockedCountry && loc.length > 0) return true;
+      return false;
     });
 
     const seen = new Set();
@@ -94,6 +104,6 @@ export default async function handler(req, res) {
 
     res.status(200).json({ jobs, total: jobs.length });
   } catch (error) {
-    res.status(500).json({ error: 'Failed to fetch jobs', jobs: [] });
+    res.status(500).json({ error: 'Failed to fetch jobs', jobs: [], details: error.message });
   }
 }
