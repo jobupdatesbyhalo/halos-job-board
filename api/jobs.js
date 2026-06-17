@@ -7,23 +7,13 @@ export default async function handler(req, res) {
   try {
     const [remotive, arbeitnow, himalayas, jsearchNg, jsearchRemote] = await Promise.allSettled([
       fetch('https://remotive.com/api/remote-jobs?limit=150').then(r => r.json()),
-      
       fetch('https://www.arbeitnow.com/api/job-board-api').then(r => r.json()),
-      
       fetch('https://himalayas.app/jobs/api?limit=100').then(r => r.json()),
-
       fetch('https://jsearch.p.rapidapi.com/search?query=jobs%20in%20nigeria&page=1&num_pages=3', {
-        headers: {
-          'x-rapidapi-host': 'jsearch.p.rapidapi.com',
-          'x-rapidapi-key': RAPIDAPI_KEY
-        }
+        headers: { 'x-rapidapi-host': 'jsearch.p.rapidapi.com', 'x-rapidapi-key': RAPIDAPI_KEY }
       }).then(r => r.json()),
-
       fetch('https://jsearch.p.rapidapi.com/search?query=remote%20jobs&page=1&num_pages=2&remote_jobs_only=true', {
-        headers: {
-          'x-rapidapi-host': 'jsearch.p.rapidapi.com',
-          'x-rapidapi-key': RAPIDAPI_KEY
-        }
+        headers: { 'x-rapidapi-host': 'jsearch.p.rapidapi.com', 'x-rapidapi-key': RAPIDAPI_KEY }
       }).then(r => r.json()),
     ]);
 
@@ -39,8 +29,8 @@ export default async function handler(req, res) {
     }
 
     if (arbeitnow.status === 'fulfilled') {
-      jobs = [...jobs, ...(arbeitnow.value.data || []).filter(j => j.remote).map(j => ({
-        title: j.title, company: j.company_name, location: 'Remote',
+      jobs = [...jobs, ...(arbeitnow.value.data || []).map(j => ({
+        title: j.title, company: j.company_name, location: j.remote ? 'Remote' : (j.location || 'Worldwide'),
         type: 'Full-time', url: j.url, date: j.created_at,
         category: j.tags?.[0] || '', source: 'Arbeitnow'
       }))];
@@ -78,19 +68,7 @@ export default async function handler(req, res) {
       }))];
     }
 
-    const blockedCountries = ["united states", "usa", "germany", "canada", "united kingdom", "australia", "france", "spain", "brazil"];
-
-    jobs = jobs.filter(j => {
-      const loc = (j.location || '').toLowerCase();
-      const isNigeria = loc.includes('nigeria');
-      const isWorldwideOrRemote = loc.includes('worldwide') || loc.includes('remote') || loc.includes('global') || loc.includes('anywhere') || loc === '';
-      const hasBlockedCountry = blockedCountries.some(c => loc.includes(c));
-
-      if (isNigeria) return true;
-      if (isWorldwideOrRemote && !hasBlockedCountry) return true;
-      if (!hasBlockedCountry && loc.length > 0) return true;
-      return false;
-    });
+    jobs = jobs.filter(j => j.title && j.url);
 
     const seen = new Set();
     jobs = jobs.filter(j => {
@@ -99,8 +77,6 @@ export default async function handler(req, res) {
       seen.add(key);
       return true;
     });
-
-    jobs = jobs.filter(j => j.title && j.url);
 
     res.status(200).json({ jobs, total: jobs.length });
   } catch (error) {
