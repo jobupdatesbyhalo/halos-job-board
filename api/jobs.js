@@ -3,18 +3,19 @@ export default async function handler(req, res) {
   res.setHeader('Cache-Control', 's-maxage=3600');
   
   const RAPIDAPI_KEY = '63a741b745msh11fcaf14afa7b5ep10bf8fjsn02c7f5838d86';
+  const headers = { 'x-rapidapi-host': 'jsearch.p.rapidapi.com', 'x-rapidapi-key': RAPIDAPI_KEY };
 
   try {
-    const [remotive, arbeitnow, himalayas, jsearchNg, jsearchRemote] = await Promise.allSettled([
+    const [remotive, arbeitnow, himalayas, ng1, ng2, remote1, remote2, africa] = await Promise.allSettled([
       fetch('https://remotive.com/api/remote-jobs?limit=150').then(r => r.json()),
       fetch('https://www.arbeitnow.com/api/job-board-api').then(r => r.json()),
       fetch('https://himalayas.app/jobs/api?limit=100').then(r => r.json()),
-      fetch('https://jsearch.p.rapidapi.com/search?query=jobs%20in%20nigeria&page=1&num_pages=3', {
-        headers: { 'x-rapidapi-host': 'jsearch.p.rapidapi.com', 'x-rapidapi-key': RAPIDAPI_KEY }
-      }).then(r => r.json()),
-      fetch('https://jsearch.p.rapidapi.com/search?query=remote%20jobs&page=1&num_pages=2&remote_jobs_only=true', {
-        headers: { 'x-rapidapi-host': 'jsearch.p.rapidapi.com', 'x-rapidapi-key': RAPIDAPI_KEY }
-      }).then(r => r.json()),
+
+      fetch('https://jsearch.p.rapidapi.com/search?query=jobs%20in%20nigeria&page=1&num_pages=5', { headers }).then(r => r.json()),
+      fetch('https://jsearch.p.rapidapi.com/search?query=jobs%20in%20lagos&page=1&num_pages=5', { headers }).then(r => r.json()),
+      fetch('https://jsearch.p.rapidapi.com/search?query=remote%20jobs&page=1&num_pages=5&remote_jobs_only=true', { headers }).then(r => r.json()),
+      fetch('https://jsearch.p.rapidapi.com/search?query=remote%20customer%20service%20jobs&page=1&num_pages=3&remote_jobs_only=true', { headers }).then(r => r.json()),
+      fetch('https://jsearch.p.rapidapi.com/search?query=remote%20jobs%20africa&page=1&num_pages=3', { headers }).then(r => r.json()),
     ]);
 
     let jobs = [];
@@ -46,27 +47,25 @@ export default async function handler(req, res) {
       }))];
     }
 
-    if (jsearchNg.status === 'fulfilled') {
-      jobs = [...jobs, ...(jsearchNg.value.data || []).map(j => ({
+    function mapJSearch(result, defaultLocation) {
+      if (result.status !== 'fulfilled') return [];
+      return (result.value.data || []).map(j => ({
         title: j.job_title, company: j.employer_name, logo: j.employer_logo,
-        location: j.job_city ? `${j.job_city}, Nigeria` : 'Nigeria',
+        location: j.job_city ? `${j.job_city}${j.job_country ? ', ' + j.job_country : ''}` : defaultLocation,
         type: j.job_employment_type,
         salary: j.job_salary_currency ? `${j.job_min_salary || ''}-${j.job_max_salary || ''} ${j.job_salary_currency}` : null,
         url: j.job_apply_link, date: j.job_posted_at_datetime_utc,
         source: 'JSearch'
-      }))];
+      }));
     }
 
-    if (jsearchRemote.status === 'fulfilled') {
-      jobs = [...jobs, ...(jsearchRemote.value.data || []).map(j => ({
-        title: j.job_title, company: j.employer_name, logo: j.employer_logo,
-        location: 'Worldwide',
-        type: j.job_employment_type,
-        salary: j.job_salary_currency ? `${j.job_min_salary || ''}-${j.job_max_salary || ''} ${j.job_salary_currency}` : null,
-        url: j.job_apply_link, date: j.job_posted_at_datetime_utc,
-        source: 'JSearch'
-      }))];
-    }
+    jobs = [...jobs,
+      ...mapJSearch(ng1, 'Nigeria'),
+      ...mapJSearch(ng2, 'Lagos, Nigeria'),
+      ...mapJSearch(remote1, 'Worldwide'),
+      ...mapJSearch(remote2, 'Worldwide'),
+      ...mapJSearch(africa, 'Africa'),
+    ];
 
     jobs = jobs.filter(j => j.title && j.url);
 
