@@ -6,7 +6,11 @@ export default async function handler(req, res) {
   const headers = { 'x-rapidapi-host': 'jsearch.p.rapidapi.com', 'x-rapidapi-key': RAPIDAPI_KEY };
 
   try {
-    const [remotive, arbeitnow, himalayas, ng1, ng2, remote1, remote2, africa] = await Promise.allSettled([
+    const [
+      remotive, arbeitnow, himalayas,
+      ng1, ng2, remote1, remote2, africa,
+      intern1, intern2, intern3, intern4
+    ] = await Promise.allSettled([
       fetch('https://remotive.com/api/remote-jobs?limit=150').then(r => r.json()),
       fetch('https://www.arbeitnow.com/api/job-board-api').then(r => r.json()),
       fetch('https://himalayas.app/jobs/api?limit=100').then(r => r.json()),
@@ -16,6 +20,11 @@ export default async function handler(req, res) {
       fetch('https://jsearch.p.rapidapi.com/search?query=remote%20jobs&page=1&num_pages=5&remote_jobs_only=true', { headers }).then(r => r.json()),
       fetch('https://jsearch.p.rapidapi.com/search?query=remote%20customer%20service%20jobs&page=1&num_pages=3&remote_jobs_only=true', { headers }).then(r => r.json()),
       fetch('https://jsearch.p.rapidapi.com/search?query=remote%20jobs%20africa&page=1&num_pages=3', { headers }).then(r => r.json()),
+
+      fetch('https://jsearch.p.rapidapi.com/search?query=internships%20in%20nigeria&page=1&num_pages=5', { headers }).then(r => r.json()),
+      fetch('https://jsearch.p.rapidapi.com/search?query=remote%20internships%20worldwide&page=1&num_pages=5&remote_jobs_only=true', { headers }).then(r => r.json()),
+      fetch('https://jsearch.p.rapidapi.com/search?query=entry%20level%20internship%20remote&page=1&num_pages=3&remote_jobs_only=true', { headers }).then(r => r.json()),
+      fetch('https://jsearch.p.rapidapi.com/search?query=graduate%20internship%20nigeria&page=1&num_pages=3', { headers }).then(r => r.json()),
     ]);
 
     let jobs = [];
@@ -31,7 +40,8 @@ export default async function handler(req, res) {
 
     if (arbeitnow.status === 'fulfilled') {
       jobs = [...jobs, ...(arbeitnow.value.data || []).map(j => ({
-        title: j.title, company: j.company_name, location: j.remote ? 'Remote' : (j.location || 'Worldwide'),
+        title: j.title, company: j.company_name,
+        location: j.remote ? 'Remote' : (j.location || 'Worldwide'),
         type: 'Full-time', url: j.url, date: j.created_at,
         category: j.tags?.[0] || '', source: 'Arbeitnow'
       }))];
@@ -65,6 +75,10 @@ export default async function handler(req, res) {
       ...mapJSearch(remote1, 'Worldwide'),
       ...mapJSearch(remote2, 'Worldwide'),
       ...mapJSearch(africa, 'Africa'),
+      ...mapJSearch(intern1, 'Nigeria'),
+      ...mapJSearch(intern2, 'Worldwide'),
+      ...mapJSearch(intern3, 'Worldwide'),
+      ...mapJSearch(intern4, 'Nigeria'),
     ];
 
     jobs = jobs.filter(j => j.title && j.url);
