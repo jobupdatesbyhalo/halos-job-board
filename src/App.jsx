@@ -42,6 +42,11 @@ function JobCard({ job }) {
           <div style={{ fontWeight: 700, fontSize: 15, color: DARK, marginBottom: 2 }}>{job.title}</div>
           <div style={{ fontSize: 13, color: "#888" }}>{job.company}</div>
         </div>
+        {job.isInternship && (
+          <span style={{ background: "#FFF3CD", color: "#856404", borderRadius: 20, padding: "4px 10px", fontSize: 11, fontWeight: 700, flexShrink: 0 }}>
+            Internship
+          </span>
+        )}
       </div>
       <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 12 }}>
         <span style={{ background: LIGHT_PINK, color: PINK, borderRadius: 20, padding: "4px 12px", fontSize: 12, fontWeight: 600 }}>
@@ -75,6 +80,7 @@ export default function App() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("All");
+  const [activeTab, setActiveTab] = useState("jobs");
   const [page, setPage] = useState(1);
   const PER_PAGE = 10;
 
@@ -96,6 +102,13 @@ export default function App() {
 
   useEffect(() => {
     let result = [...jobs];
+
+    if (activeTab === "internships") {
+      result = result.filter(j => j.isInternship);
+    } else {
+      result = result.filter(j => !j.isInternship);
+    }
+
     if (search.trim()) {
       const q = search.toLowerCase();
       result = result.filter(j =>
@@ -103,17 +116,21 @@ export default function App() {
         j.company?.toLowerCase().includes(q)
       );
     }
+
     if (category !== "All") {
       result = result.filter(j =>
         j.category?.toLowerCase().includes(category.toLowerCase()) ||
         j.title?.toLowerCase().includes(category.toLowerCase())
       );
     }
+
     setFiltered(result);
     setPage(1);
-  }, [jobs, search, category]);
+  }, [jobs, search, category, activeTab]);
 
   const paginated = filtered.slice(0, page * PER_PAGE);
+  const internshipCount = jobs.filter(j => j.isInternship).length;
+  const jobCount = jobs.filter(j => !j.isInternship).length;
 
   return (
     <div style={{ fontFamily: "system-ui, sans-serif", background: "#FBF5F8", minHeight: "100vh" }}>
@@ -129,15 +146,21 @@ export default function App() {
           Built for Nigerian job seekers by Halo 💗
         </p>
         {!loading && (
-          <div style={{
-            display: "inline-flex", alignItems: "center", gap: 8,
-            background: "rgba(244,91,142,0.15)", borderRadius: 24,
-            padding: "8px 20px", marginBottom: 24
-          }}>
-            <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#22C55E", display: "inline-block" }} />
-            <span style={{ color: "#fff", fontSize: 14, fontWeight: 600 }}>
-              {filtered.length} worldwide remote jobs available
-            </span>
+          <div style={{ display: "flex", gap: 12, justifyContent: "center", marginBottom: 24, flexWrap: "wrap" }}>
+            <div style={{
+              display: "inline-flex", alignItems: "center", gap: 8,
+              background: "rgba(244,91,142,0.15)", borderRadius: 24, padding: "8px 20px"
+            }}>
+              <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#22C55E", display: "inline-block" }} />
+              <span style={{ color: "#fff", fontSize: 14, fontWeight: 600 }}>{jobCount} jobs available</span>
+            </div>
+            <div style={{
+              display: "inline-flex", alignItems: "center", gap: 8,
+              background: "rgba(255,243,205,0.15)", borderRadius: 24, padding: "8px 20px"
+            }}>
+              <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#FFC107", display: "inline-block" }} />
+              <span style={{ color: "#fff", fontSize: 14, fontWeight: 600 }}>{internshipCount} internships available</span>
+            </div>
           </div>
         )}
         <div style={{
@@ -157,6 +180,25 @@ export default function App() {
         </div>
       </div>
 
+      {/* Tabs */}
+      <div style={{ background: "#fff", borderBottom: "1px solid #F0E0E8", padding: "0 16px" }}>
+        <div style={{ maxWidth: 800, margin: "0 auto", display: "flex" }}>
+          <button onClick={() => setActiveTab("jobs")} style={{
+            padding: "14px 24px", border: "none", background: "none", cursor: "pointer",
+            fontWeight: 700, fontSize: 14,
+            color: activeTab === "jobs" ? PINK : "#888",
+            borderBottom: activeTab === "jobs" ? `3px solid ${PINK}` : "3px solid transparent"
+          }}>💼 Jobs ({jobCount})</button>
+          <button onClick={() => setActiveTab("internships")} style={{
+            padding: "14px 24px", border: "none", background: "none", cursor: "pointer",
+            fontWeight: 700, fontSize: 14,
+            color: activeTab === "internships" ? PINK : "#888",
+            borderBottom: activeTab === "internships" ? `3px solid ${PINK}` : "3px solid transparent"
+          }}>🎓 Internships ({internshipCount})</button>
+        </div>
+      </div>
+
+      {/* Category filters */}
       <div style={{ background: "#fff", borderBottom: "1px solid #F0E0E8", padding: "12px 16px", overflowX: "auto" }}>
         <div style={{ display: "flex", gap: 8, minWidth: "max-content" }}>
           {CATEGORIES.map(cat => (
@@ -174,12 +216,12 @@ export default function App() {
         {loading ? (
           <div style={{ textAlign: "center", padding: "60px 20px", color: "#888" }}>
             <div style={{ fontSize: 32, marginBottom: 12 }}>⏳</div>
-            <div style={{ fontWeight: 600, marginBottom: 8 }}>Loading worldwide remote jobs...</div>
+            <div style={{ fontWeight: 600 }}>Loading opportunities...</div>
           </div>
         ) : filtered.length === 0 ? (
           <div style={{ textAlign: "center", padding: "60px 20px" }}>
             <div style={{ fontSize: 48, marginBottom: 16 }}>🔍</div>
-            <div style={{ fontSize: 18, fontWeight: 700, color: DARK, marginBottom: 8 }}>No jobs found</div>
+            <div style={{ fontSize: 18, fontWeight: 700, color: DARK, marginBottom: 8 }}>No results found</div>
             <button onClick={() => { setSearch(""); setCategory("All"); }} style={{
               marginTop: 16, background: PINK, color: "#fff", border: "none",
               borderRadius: 20, padding: "10px 24px", fontWeight: 700, cursor: "pointer"
@@ -188,7 +230,7 @@ export default function App() {
         ) : (
           <>
             <p style={{ color: "#888", fontSize: 13, marginBottom: 16 }}>
-              Showing <strong style={{ color: DARK }}>{paginated.length}</strong> of <strong style={{ color: DARK }}>{filtered.length}</strong> jobs
+              Showing <strong style={{ color: DARK }}>{paginated.length}</strong> of <strong style={{ color: DARK }}>{filtered.length}</strong> {activeTab}
             </p>
             {paginated.map((job, i) => <JobCard key={i} job={job} />)}
             {paginated.length < filtered.length && (
@@ -197,7 +239,7 @@ export default function App() {
                   background: PINK, color: "#fff", border: "none",
                   borderRadius: 24, padding: "12px 32px", fontSize: 15,
                   fontWeight: 700, cursor: "pointer"
-                }}>Load More Jobs</button>
+                }}>Load More</button>
               </div>
             )}
           </>
