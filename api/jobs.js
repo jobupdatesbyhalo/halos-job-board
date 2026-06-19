@@ -18,7 +18,8 @@ export default async function handler(req, res) {
       intern1, intern2, intern3, intern4, intern5, intern6
     ] = await Promise.allSettled([
       fetch('https://remotive.com/api/remote-jobs?limit=150').then(r => r.json()),
-      fetch('https://remotive.com/api/remote-jobs?category=all-others&limit=50').then(r => r.json()),
+      fetch('https://remotive.com/api/remote-jobs?search=intern&limit=50').then(r => r.json()),
+
       fetch('https://www.arbeitnow.com/api/job-board-api').then(r => r.json()),
       fetch('https://himalayas.app/jobs/api?limit=100').then(r => r.json()),
 
