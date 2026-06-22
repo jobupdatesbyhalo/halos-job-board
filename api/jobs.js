@@ -14,16 +14,19 @@ export default async function handler(req, res) {
 
   // Remotive
   try {
-    const r = await fetch('https://remotive.com/api/remote-jobs?limit=150');
+      try {
+    const r = await fetch('https://himalayas.app/jobs/api/search?employment_type=Intern&page=1');
     const d = await r.json();
     jobs = [...jobs, ...(d.jobs || []).map(j => ({
-      title: j.title, company: j.company_name, logo: j.company_logo_url,
-      location: j.candidate_required_location || 'Worldwide',
-      type: j.job_type, salary: j.salary, url: j.url,
-      date: j.publication_date, category: j.category, source: 'Remotive',
-      isInternship: isInternship(j.title) || j.job_type === 'internship'
+      title: j.title, company: j.companyName, logo: j.companyLogo,
+      location: j.locationRestrictions?.join(', ') || 'Worldwide',
+      type: 'Intern', salary: j.minSalary ? `${j.minSalary}-${j.maxSalary} ${j.currency || ''}` : null,
+      url: j.applicationLink || j.url, date: j.publishedAt,
+      category: j.categories?.[0] || '', source: 'Himalayas',
+      isInternship: true
     }))];
   } catch (e) {}
+
 
   // Arbeitnow
   try {
